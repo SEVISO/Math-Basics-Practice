@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matemáticas — Practice</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f0f0d1;
+    --bg-card: #f7f7e4;
+    --ink: #1a1a14;
+    --ink-soft: #4a4a38;
+    --accent: #2d6e3e;
+    --accent-light: #d4ead9;
+    --red: #b83232;
+    --red-light: #f5dada;
+    --gold: #c8901a;
+    --gold-light: #f5e8cc;
+    --border: #c8c8a8;
+    --shadow: rgba(26,26,20,0.10);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px 64px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.2rem, 6vw, 3.6rem);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    line-height: 1;
+  }
+
+  .subtitle {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-top: 6px;
+  }
+
+  .divider {
+    width: 60px; height: 2px;
+    background: var(--accent);
+    margin: 14px auto 0;
+  }
+
+  /* === SCREEN MANAGEMENT === */
+  .screen { display: none; width: 100%; max-width: 620px; }
+  .screen.active { display: block; }
+
+  /* === START SCREEN === */
+  .start-card {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    padding: 44px 48px;
+    text-align: center;
+    box-shadow: 0 6px 32px var(--shadow);
+  }
+
+  .start-card h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+
+  .start-card p {
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+    line-height: 1.65;
+    margin-bottom: 32px;
+  }
+
+  .rules-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 36px;
+  }
+
+  .rule-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 14px 12px;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+
+  .rule-box strong {
+    display: block;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--ink);
+    margin-bottom: 3px;
+    letter-spacing: 0.04em;
+  }
+
+  /* === BUTTONS === */
+  .btn {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 14px 36px;
+    border: 2px solid var(--ink);
+    background: var(--ink);
+    color: var(--bg);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    text-decoration: none;
+  }
+
+  .btn:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(45,110,62,0.25);
+  }
+
+  .btn:active { transform: translateY(0); }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--ink);
+  }
+
+  .btn-outline:hover {
+    background: var(--ink);
+    color: var(--bg);
+  }
+
+  /* === GAME SCREEN === */
+  .progress-bar-wrap {
+    margin-bottom: 28px;
+  }
+
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 7px;
+  }
+
+  .progress-label span {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .score-display {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .progress-track {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* === EQUATION CARD === */
+  .equation-card {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    padding: 52px 48px 44px;
+    text-align: center;
+    box-shadow: 0 6px 32px var(--shadow);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .op-badge {
+    position: absolute;
+    top: 18px; right: 18px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 2px;
+    background: var(--gold-light);
+    color: var(--gold);
+    border: 1px solid #e0c070;
+  }
+
+  .equation-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-bottom: 36px;
+  }
+
+  .eq-part {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.4rem, 8vw, 4rem);
+    font-weight: 900;
+    color: var(--ink);
+    line-height: 1;
+  }
+
+  .eq-op {
+    font-family: 'DM Mono', monospace;
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    font-weight: 500;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .eq-equals {
+    font-family: 'DM Mono', monospace;
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    font-weight: 500;
+    color: var(--ink-soft);
+    line-height: 1;
+  }
+
+  .answer-input {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.4rem, 8vw, 4rem);
+    font-weight: 900;
+    color: var(--ink);
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid var(--ink);
+    outline: none;
+    width: clamp(80px, 15vw, 130px);
+    text-align: center;
+    line-height: 1;
+    padding-bottom: 2px;
+    transition: border-color 0.2s;
+    -moz-appearance: textfield;
+  }
+
+  .answer-input::-webkit-outer-spin-button,
+  .answer-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  .answer-input:focus { border-color: var(--accent); }
+
+  .answer-input.correct { border-color: var(--accent); color: var(--accent); }
+  .answer-input.wrong   { border-color: var(--red);   color: var(--red); }
+
+  .feedback-row {
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+
+  .feedback-msg {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .feedback-msg.visible { opacity: 1; }
+  .feedback-msg.ok  { color: var(--accent); }
+  .feedback-msg.err { color: var(--red); }
+
+  .submit-row {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+  }
+
+  /* === REVIEW SCREEN === */
+  .review-card {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    padding: 40px 44px;
+    box-shadow: 0 6px 32px var(--shadow);
+    margin-bottom: 28px;
+  }
+
+  .review-card h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .review-card .stat-line {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 24px;
+  }
+
+  .review-list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 4px;
+    margin-bottom: 28px;
+  }
+
+  .review-list::-webkit-scrollbar { width: 4px; }
+  .review-list::-webkit-scrollbar-track { background: var(--bg); }
+  .review-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .review-item {
+    background: var(--red-light);
+    border: 1px solid #e8b4b4;
+    border-radius: 3px;
+    padding: 10px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--red);
+  }
+
+  /* === CELEBRATION SCREEN === */
+  .celebration-card {
+    background: var(--bg-card);
+    border: 2px solid var(--accent);
+    border-radius: 4px;
+    padding: 60px 48px;
+    text-align: center;
+    box-shadow: 0 8px 40px rgba(45,110,62,0.18);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .celebration-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, #006847, #ffffff, #ce1126);
+  }
+
+  .celebration-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, #006847, #ffffff, #ce1126);
+  }
+
+  .viva {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 7vw, 3.2rem);
+    font-weight: 900;
+    background: linear-gradient(135deg, #006847 30%, #ce1126 70%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.88; transform: scale(1.02); }
+  }
+
+  .celebration-msg {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1.05rem;
+    color: var(--ink-soft);
+    line-height: 1.65;
+    margin-bottom: 32px;
+  }
+
+  .celebration-stat {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 10px 22px;
+    background: var(--accent-light);
+    border: 1px solid #a8d4b2;
+    border-radius: 2px;
+    color: var(--accent);
+    margin-bottom: 36px;
+  }
+
+  /* Confetti */
+  .confetti-container {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  .confetti-piece {
+    position: absolute;
+    width: 8px; height: 8px;
+    opacity: 0;
+    animation: confettiFall linear forwards;
+  }
+
+  @keyframes confettiFall {
+    0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* === TRANSITIONS === */
+  .screen { animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 480px) {
+    .start-card, .equation-card, .review-card, .celebration-card {
+      padding: 32px 22px;
+    }
+    .rules-grid { grid-template-columns: 1fr; }
+    .equation-row { gap: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title">Matemáticas</div>
+  <div class="subtitle">Practice &amp; Mastery</div>
+  <div class="divider"></div>
+</header>
+
+<!-- START SCREEN -->
+<div id="screen-start" class="screen active">
+  <div class="start-card">
+    <h2>Ready to Practice?</h2>
+    <p>Work through 20 problems to earn your points. Every equation has three parts — one is hidden. Find it.</p>
+    <div class="rules-grid">
+      <div class="rule-box"><strong>Addition</strong>Numbers 1–100<br>All combinations</div>
+      <div class="rule-box"><strong>Subtraction</strong>Numbers 1–100<br>All combinations</div>
+      <div class="rule-box"><strong>Multiplication</strong>Numbers 1–12<br>Full tables</div>
+      <div class="rule-box"><strong>Division</strong>Numbers 1–12<br>Exact quotients</div>
+    </div>
+    <button class="btn" onclick="startSession()">Begin Session</button>
+  </div>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="screen-game" class="screen">
+  <div class="progress-bar-wrap">
+    <div class="progress-label">
+      <span>Progress</span>
+      <span class="score-display"><span id="score">0</span> / 20</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div class="equation-card">
+    <div class="op-badge" id="op-badge">Addition</div>
+    <div class="equation-row" id="equation-row">
+      <!-- filled by JS -->
+    </div>
+    <div class="feedback-row">
+      <div class="feedback-msg" id="feedback-msg"></div>
+    </div>
+    <div class="submit-row">
+      <button class="btn" onclick="submitAnswer()">Check</button>
+    </div>
+  </div>
+</div>
+
+<!-- REVIEW SCREEN -->
+<div id="screen-review" class="screen">
+  <div class="review-card">
+    <h2>Session Complete</h2>
+    <div class="stat-line" id="review-stat"></div>
+    <p style="color:var(--ink-soft);font-size:.9rem;margin-bottom:20px;">You answered correctly on <strong id="review-correct-count"></strong> out of <strong id="review-total-count"></strong> attempts. Now let's fix the ones you missed.</p>
+    <ul class="review-list" id="review-list"></ul>
+    <button class="btn" onclick="startReview()">Practice Missed Problems</button>
+  </div>
+</div>
+
+<!-- CELEBRATION SCREEN -->
+<div id="screen-celebration" class="screen">
+  <div class="celebration-card">
+    <div class="viva">¡Viva México!</div>
+    <p class="celebration-msg">You answered all equations correctly.<br>Outstanding work — every single one.</p>
+    <div class="celebration-stat" id="celebration-stat"></div>
+    <br>
+    <button class="btn" onclick="startSession()">New Session</button>
+  </div>
+</div>
+
+<div class="confetti-container" id="confetti-container"></div>
+
+<script>
+// ===========================
+// EQUATION GENERATION
+// ===========================
+
+function buildEquations() {
+  const eqs = [];
+
+  // Addition: a + b = c, 1 ≤ a,b ≤ 100
+  for (let a = 1; a <= 100; a++) {
+    for (let b = a; b <= 100; b++) {
+      eqs.push({ type: 'add', a, b, c: a + b });
+    }
+  }
+
+  // Subtraction: a - b = c, 1 ≤ b < a ≤ 100, c ≥ 1
+  for (let a = 2; a <= 100; a++) {
+    for (let b = 1; b < a; b++) {
+      eqs.push({ type: 'sub', a, b, c: a - b });
+    }
+  }
+
+  // Multiplication: a × b = c, 1 ≤ a,b ≤ 12
+  for (let a = 1; a <= 12; a++) {
+    for (let b = a; b <= 12; b++) {
+      eqs.push({ type: 'mul', a, b, c: a * b });
+    }
+  }
+
+  // Division: a ÷ b = c (exact), derived from mult
+  for (let a = 1; a <= 12; a++) {
+    for (let b = 1; b <= 12; b++) {
+      eqs.push({ type: 'div', a: a * b, b, c: a });
+    }
+  }
+
+  return eqs;
+}
+
+// Assign a random missing variable position (0=a, 1=b, 2=c)
+function assignBlank(eq) {
+  const pos = Math.floor(Math.random() * 3);
+  return { ...eq, blank: pos };
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// ===========================
+// STATE
+// ===========================
+const ALL_EQS = buildEquations();
+let sessionQueue = [];      // shuffled list for main session
+let sessionIndex = 0;
+let score = 0;
+let totalAttempts = 0;
+let wrongSet = [];           // equations answered wrong during session
+let reviewQueue = [];        // wrong ones for review
+let reviewIndex = 0;
+let isReviewMode = false;
+
+function startSession() {
+  // Build a randomized selection; use all, chunked to avoid freezes
+  sessionQueue = shuffle(shuffle(ALL_EQS).slice()).map(assignBlank);
+  sessionIndex = 0;
+  score = 0;
+  totalAttempts = 0;
+  wrongSet = [];
+  isReviewMode = false;
+  showScreen('game');
+  renderQuestion();
+}
+
+function startReview() {
+  reviewQueue = wrongSet.map(assignBlank);
+  shuffle(reviewQueue);
+  reviewIndex = 0;
+  isReviewMode = true;
+  showScreen('game');
+  renderQuestion();
+}
+
+// ===========================
+// RENDERING
+// ===========================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+
+const OP_SYMBOLS = { add: '+', sub: '−', mul: '×', div: '÷' };
+const OP_NAMES   = { add: 'Addition', sub: 'Subtraction', mul: 'Multiplication', div: 'Division' };
+
+function renderQuestion() {
+  const eq = isReviewMode ? reviewQueue[reviewIndex] : sessionQueue[sessionIndex];
+  if (!eq) return;
+
+  // Update score bar
+  document.getElementById('score').textContent = score;
+  document.getElementById('progress-fill').style.width = (score / 20 * 100) + '%';
+
+  // Badge
+  document.getElementById('op-badge').textContent = OP_NAMES[eq.type];
+
+  // Build equation row
+  const row = document.getElementById('equation-row');
+  row.innerHTML = '';
+
+  const parts = [
+    { value: eq.a, index: 0 },
+    'op',
+    { value: eq.b, index: 1 },
+    'eq',
+    { value: eq.c, index: 2 }
+  ];
+
+  parts.forEach(part => {
+    if (part === 'op') {
+      const span = document.createElement('span');
+      span.className = 'eq-op';
+      span.textContent = OP_SYMBOLS[eq.type];
+      row.appendChild(span);
+    } else if (part === 'eq') {
+      const span = document.createElement('span');
+      span.className = 'eq-equals';
+      span.textContent = '=';
+      row.appendChild(span);
+    } else {
+      if (part.index === eq.blank) {
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.className = 'answer-input';
+        input.id = 'answer-input';
+        input.autocomplete = 'off';
+        input.addEventListener('keydown', e => { if (e.key === 'Enter') submitAnswer(); });
+        row.appendChild(input);
+        setTimeout(() => input.focus(), 50);
+      } else {
+        const span = document.createElement('span');
+        span.className = 'eq-part';
+        span.textContent = part.value;
+        row.appendChild(span);
+      }
+    }
+  });
+
+  clearFeedback();
+}
+
+function clearFeedback() {
+  const fb = document.getElementById('feedback-msg');
+  fb.className = 'feedback-msg';
+  fb.textContent = '';
+}
+
+function showFeedback(msg, type) {
+  const fb = document.getElementById('feedback-msg');
+  fb.className = 'feedback-msg visible ' + type;
+  fb.textContent = msg;
+}
+
+// ===========================
+// ANSWER CHECKING
+// ===========================
+function submitAnswer() {
+  const input = document.getElementById('answer-input');
+  if (!input) return;
+
+  const val = parseInt(input.value, 10);
+  if (isNaN(val)) {
+    showFeedback('Enter a number.', 'err');
+    input.focus();
+    return;
+  }
+
+  const eq = isReviewMode ? reviewQueue[reviewIndex] : sessionQueue[sessionIndex];
+  const correct = [eq.a, eq.b, eq.c][eq.blank];
+
+  if (val === correct) {
+    input.classList.add('correct');
+    showFeedback('Correct!', 'ok');
+
+    setTimeout(() => {
+      if (isReviewMode) {
+        reviewIndex++;
+        if (reviewIndex >= reviewQueue.length) {
+          showCelebration();
+        } else {
+          renderQuestion();
+        }
+      } else {
+        score++;
+        totalAttempts++;
+        sessionIndex++;
+        if (score >= 20) {
+          goToReview();
+        } else {
+          renderQuestion();
+        }
+      }
+    }, 600);
+  } else {
+    input.classList.add('wrong');
+    showFeedback(`Not quite — try again.`, 'err');
+    totalAttempts++;
+
+    // Record wrong if not already tracked (once per question)
+    if (!isReviewMode && !eq._markedWrong) {
+      eq._markedWrong = true;
+      wrongSet.push(eq);
+    }
+
+    setTimeout(() => {
+      input.value = '';
+      input.classList.remove('wrong');
+      clearFeedback();
+      input.focus();
+    }, 900);
+  }
+}
+
+// ===========================
+// FLOW
+// ===========================
+function goToReview() {
+  document.getElementById('score').textContent = score;
+  document.getElementById('progress-fill').style.width = '100%';
+
+  if (wrongSet.length === 0) {
+    showCelebration();
+    return;
+  }
+
+  // Populate review screen
+  document.getElementById('review-stat').textContent =
+    `${totalAttempts} attempts to reach 20 points`;
+  document.getElementById('review-correct-count').textContent = score;
+  document.getElementById('review-total-count').textContent = totalAttempts;
+
+  const list = document.getElementById('review-list');
+  list.innerHTML = '';
+  wrongSet.forEach(eq => {
+    const li = document.createElement('li');
+    li.className = 'review-item';
+    const blanks = ['?', eq.b, eq.c];
+    const display = (eq.blank === 0)
+      ? `? ${OP_SYMBOLS[eq.type]} ${eq.b} = ${eq.c}`
+      : (eq.blank === 1)
+      ? `${eq.a} ${OP_SYMBOLS[eq.type]} ? = ${eq.c}`
+      : `${eq.a} ${OP_SYMBOLS[eq.type]} ${eq.b} = ?`;
+    li.textContent = display;
+    list.appendChild(li);
+  });
+
+  showScreen('review');
+}
+
+function showCelebration() {
+  document.getElementById('celebration-stat').textContent =
+    `${totalAttempts} total attempts · all correct`;
+  showScreen('celebration');
+  launchConfetti();
+}
+
+// ===========================
+// CONFETTI
+// ===========================
+function launchConfetti() {
+  const container = document.getElementById('confetti-container');
+  container.innerHTML = '';
+  const colors = ['#006847', '#ce1126', '#c8901a', '#f0f0d1', '#2d6e3e', '#b83232'];
+
+  for (let i = 0; i < 90; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = Math.random() * 100 + 'vw';
+    piece.style.top = '-10px';
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+    piece.style.width = (6 + Math.random() * 8) + 'px';
+    piece.style.height = (6 + Math.random() * 8) + 'px';
+    piece.style.animationDuration = (1.8 + Math.random() * 2.2) + 's';
+    piece.style.animationDelay = (Math.random() * 1.2) + 's';
+    container.appendChild(piece);
+  }
+
+  setTimeout(() => { container.innerHTML = ''; }, 5000);
+}
+</script>
+</body>
+</html>
