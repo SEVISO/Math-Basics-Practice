@@ -494,7 +494,6 @@
   </div>
 
   <div class="equation-card">
-    <div class="op-badge" id="op-badge">Addition</div>
     <div class="equation-row" id="equation-row">
       <!-- filled by JS -->
     </div>
@@ -539,17 +538,17 @@
 function buildEquations() {
   const eqs = [];
 
-  // Addition: a + b = c, 1 ≤ a,b ≤ 100
-  for (let a = 1; a <= 100; a++) {
-    for (let b = a; b <= 100; b++) {
+  // Addition: a + b = c, 1 ≤ a ≤ b, c ≤ 100
+  for (let a = 1; a <= 99; a++) {
+    for (let b = a; b <= 100 - a; b++) {
       eqs.push({ type: 'add', a, b, c: a + b });
     }
   }
 
-  // Subtraction: a - b = c, 1 ≤ b < a ≤ 100, c ≥ 1
+  // Subtraction: a - b = c, derived from addition above (c ≥ 1)
   for (let a = 2; a <= 100; a++) {
     for (let b = 1; b < a; b++) {
-      eqs.push({ type: 'sub', a, b, c: a - b });
+      if (a <= 100) eqs.push({ type: 'sub', a, b, c: a - b });
     }
   }
 
@@ -588,6 +587,30 @@ function shuffle(arr) {
 // STATE
 // ===========================
 const ALL_EQS = buildEquations();
+const POOLS = {
+  add: shuffle(ALL_EQS.filter(e => e.type === 'add').slice()),
+  sub: shuffle(ALL_EQS.filter(e => e.type === 'sub').slice()),
+  mul: shuffle(ALL_EQS.filter(e => e.type === 'mul').slice()),
+  div: shuffle(ALL_EQS.filter(e => e.type === 'div').slice()),
+};
+// Track pool indices so we don't repeat until exhausted
+const poolIdx = { add: 0, sub: 0, mul: 0, div: 0 };
+
+function pickFromPool(type) {
+  const pool = POOLS[type];
+  if (poolIdx[type] >= pool.length) {
+    shuffle(pool);
+    poolIdx[type] = 0;
+  }
+  return pool[poolIdx[type]++];
+}
+
+function buildSession() {
+  // 5 of each type, interleaved and shuffled
+  const types = ['add','sub','mul','div','add','sub','mul','div','add','sub','mul','div','add','sub','mul','div','add','sub','mul','div'];
+  shuffle(types);
+  return types.map(t => assignBlank({ ...pickFromPool(t) }));
+}
 let sessionQueue = [];      // shuffled list for main session
 let sessionIndex = 0;
 let score = 0;
@@ -599,7 +622,7 @@ let isReviewMode = false;
 
 function startSession() {
   // Build a randomized selection; use all, chunked to avoid freezes
-  sessionQueue = shuffle(shuffle(ALL_EQS).slice()).map(assignBlank);
+  sessionQueue = buildSession();
   sessionIndex = 0;
   score = 0;
   totalAttempts = 0;
@@ -637,8 +660,7 @@ function renderQuestion() {
   document.getElementById('score').textContent = score;
   document.getElementById('progress-fill').style.width = (score / 20 * 100) + '%';
 
-  // Badge
-  document.getElementById('op-badge').textContent = OP_NAMES[eq.type];
+  // Badge removed
 
   // Build equation row
   const row = document.getElementById('equation-row');
@@ -823,6 +845,528 @@ function launchConfetti() {
   }
 
   setTimeout(() => { container.innerHTML = ''; }, 5000);
+}
+</script>
+
+<!-- ============================================================ -->
+<!-- SECTION 2: SINGLE-DIGIT ADDITION DRILL                       -->
+<!-- ============================================================ -->
+<div style="width:100%;max-width:620px;margin-top:72px;">
+  <div style="text-align:center;margin-bottom:32px;">
+    <div style="font-family:'Playfair Display',serif;font-size:clamp(1.6rem,5vw,2.6rem);font-weight:900;letter-spacing:-0.02em;color:#1a1a14;line-height:1;">Single Digits</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;color:#4a4a38;margin-top:6px;">Addition Drill · 1 – 10</div>
+    <div style="width:60px;height:2px;background:#2d6e3e;margin:12px auto 0;"></div>
+  </div>
+
+  <!-- SD START -->
+  <div id="sd-screen-start" class="sd-screen sd-active">
+    <div class="start-card">
+      <h2>All 81 Combinations</h2>
+      <p>Every single-digit addition pair — randomized. One variable is always hidden. Work through all 81, then revisit any you missed until every answer is correct.</p>
+      <button class="btn" onclick="sdStart()">Begin Drill</button>
+    </div>
+  </div>
+
+  <!-- SD GAME -->
+  <div id="sd-screen-game" class="sd-screen">
+    <div class="progress-bar-wrap">
+      <div class="progress-label">
+        <span>Progress</span>
+        <span class="score-display"><span id="sd-score">0</span> / <span id="sd-total">81</span></span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="sd-progress-fill" style="width:0%"></div>
+      </div>
+    </div>
+    <div class="equation-card">
+      <div class="equation-row" id="sd-equation-row"></div>
+      <div class="feedback-row">
+        <div class="feedback-msg" id="sd-feedback-msg"></div>
+      </div>
+      <div class="submit-row">
+        <button class="btn" onclick="sdSubmit()">Check</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SD REVIEW -->
+  <div id="sd-screen-review" class="sd-screen">
+    <div class="review-card">
+      <h2>Drill Complete</h2>
+      <div class="stat-line" id="sd-review-stat"></div>
+      <p style="color:var(--ink-soft);font-size:.9rem;margin-bottom:20px;">You missed <strong id="sd-missed-count"></strong> problem(s). Work through them now — all must be correct before you finish.</p>
+      <ul class="review-list" id="sd-review-list"></ul>
+      <button class="btn" onclick="sdStartReview()">Practice Missed</button>
+    </div>
+  </div>
+
+  <!-- SD CELEBRATION -->
+  <div id="sd-screen-celebration" class="sd-screen">
+    <div class="celebration-card">
+      <div class="viva">¡Viva México!</div>
+      <p class="celebration-msg">All 81 addition facts answered correctly.<br>Every single one. Brilliant work.</p>
+      <div class="celebration-stat" id="sd-celebration-stat"></div>
+      <br>
+      <button class="btn" onclick="sdStart()">Drill Again</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .sd-screen { display: none; width: 100%; }
+  .sd-screen.sd-active { display: block; animation: fadeIn 0.3s ease; }
+</style>
+
+<script>
+// ===========================
+// SINGLE-DIGIT ADDITION DRILL
+// ===========================
+
+function buildSdEquations() {
+  const eqs = [];
+  for (let a = 1; a <= 10; a++) {
+    for (let b = 1; b <= 10; b++) {
+      eqs.push({ type: 'add', a, b, c: a + b });
+    }
+  }
+  return eqs;
+}
+
+function sdAssignBlank(eq) {
+  const pos = Math.floor(Math.random() * 3);
+  return { ...eq, blank: pos };
+}
+
+function sdShuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+const SD_ALL = buildSdEquations(); // 81 problems
+
+let sdQueue = [];
+let sdIndex = 0;
+let sdCorrect = 0;
+let sdAttempts = 0;
+let sdWrong = [];
+let sdReviewQueue = [];
+let sdReviewIndex = 0;
+let sdIsReview = false;
+
+function sdShowScreen(id) {
+  document.querySelectorAll('.sd-screen').forEach(s => s.classList.remove('sd-active'));
+  document.getElementById('sd-screen-' + id).classList.add('sd-active');
+}
+
+function sdStart() {
+  sdQueue = sdShuffle(SD_ALL.map(e => sdAssignBlank({ ...e })));
+  sdIndex = 0;
+  sdCorrect = 0;
+  sdAttempts = 0;
+  sdWrong = [];
+  sdIsReview = false;
+  document.getElementById('sd-total').textContent = sdQueue.length;
+  sdShowScreen('game');
+  sdRender();
+}
+
+function sdStartReview() {
+  sdReviewQueue = sdShuffle(sdWrong.map(e => sdAssignBlank({ ...e })));
+  sdReviewIndex = 0;
+  sdIsReview = true;
+  sdShowScreen('game');
+  sdRender();
+}
+
+function sdRender() {
+  const eq = sdIsReview ? sdReviewQueue[sdReviewIndex] : sdQueue[sdIndex];
+  if (!eq) return;
+
+  const total = sdIsReview ? sdReviewQueue.length : sdQueue.length;
+  const done  = sdIsReview ? sdReviewIndex : sdIndex;
+  document.getElementById('sd-score').textContent = done;
+  document.getElementById('sd-total').textContent = total;
+  document.getElementById('sd-progress-fill').style.width = (done / total * 100) + '%';
+
+  const row = document.getElementById('sd-equation-row');
+  row.innerHTML = '';
+
+  const parts = [
+    { value: eq.a, index: 0 }, 'op',
+    { value: eq.b, index: 1 }, 'eq',
+    { value: eq.c, index: 2 }
+  ];
+
+  parts.forEach(part => {
+    if (part === 'op') {
+      const s = document.createElement('span');
+      s.className = 'eq-op'; s.textContent = '+';
+      row.appendChild(s);
+    } else if (part === 'eq') {
+      const s = document.createElement('span');
+      s.className = 'eq-equals'; s.textContent = '=';
+      row.appendChild(s);
+    } else {
+      if (part.index === eq.blank) {
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.className = 'answer-input';
+        input.id = 'sd-answer-input';
+        input.autocomplete = 'off';
+        input.addEventListener('keydown', e => { if (e.key === 'Enter') sdSubmit(); });
+        row.appendChild(input);
+        setTimeout(() => input.focus(), 50);
+      } else {
+        const s = document.createElement('span');
+        s.className = 'eq-part'; s.textContent = part.value;
+        row.appendChild(s);
+      }
+    }
+  });
+
+  const fb = document.getElementById('sd-feedback-msg');
+  fb.className = 'feedback-msg'; fb.textContent = '';
+}
+
+function sdSubmit() {
+  const input = document.getElementById('sd-answer-input');
+  if (!input) return;
+  const val = parseInt(input.value, 10);
+  if (isNaN(val)) {
+    const fb = document.getElementById('sd-feedback-msg');
+    fb.className = 'feedback-msg visible err'; fb.textContent = 'Enter a number.';
+    input.focus(); return;
+  }
+
+  const eq = sdIsReview ? sdReviewQueue[sdReviewIndex] : sdQueue[sdIndex];
+  const correct = [eq.a, eq.b, eq.c][eq.blank];
+
+  if (val === correct) {
+    input.classList.add('correct');
+    const fb = document.getElementById('sd-feedback-msg');
+    fb.className = 'feedback-msg visible ok'; fb.textContent = 'Correct!';
+
+    setTimeout(() => {
+      if (sdIsReview) {
+        sdReviewIndex++;
+        if (sdReviewIndex >= sdReviewQueue.length) sdCelebrate();
+        else sdRender();
+      } else {
+        sdCorrect++;
+        sdAttempts++;
+        sdIndex++;
+        if (sdIndex >= sdQueue.length) sdGoReview();
+        else sdRender();
+      }
+    }, 600);
+  } else {
+    input.classList.add('wrong');
+    const fb = document.getElementById('sd-feedback-msg');
+    fb.className = 'feedback-msg visible err'; fb.textContent = 'Not quite — try again.';
+    sdAttempts++;
+    if (!sdIsReview && !eq._markedWrong) {
+      eq._markedWrong = true;
+      sdWrong.push(eq);
+    }
+    setTimeout(() => {
+      input.value = ''; input.classList.remove('wrong');
+      fb.className = 'feedback-msg'; fb.textContent = '';
+      input.focus();
+    }, 900);
+  }
+}
+
+function sdGoReview() {
+  if (sdWrong.length === 0) { sdCelebrate(); return; }
+
+  document.getElementById('sd-review-stat').textContent =
+    `${sdAttempts} attempts · ${sdWrong.length} missed`;
+  document.getElementById('sd-missed-count').textContent = sdWrong.length;
+
+  const list = document.getElementById('sd-review-list');
+  list.innerHTML = '';
+  sdWrong.forEach(eq => {
+    const li = document.createElement('li');
+    li.className = 'review-item';
+    li.textContent = eq.blank === 0 ? `? + ${eq.b} = ${eq.c}`
+                   : eq.blank === 1 ? `${eq.a} + ? = ${eq.c}`
+                   : `${eq.a} + ${eq.b} = ?`;
+    list.appendChild(li);
+  });
+  sdShowScreen('review');
+}
+
+function sdCelebrate() {
+  document.getElementById('sd-celebration-stat').textContent =
+    `${sdAttempts} total attempts · all 100 correct`;
+  sdShowScreen('celebration');
+  launchConfetti();
+}
+</script>
+
+<!-- ============================================================ -->
+<!-- SECTION 3: SINGLE-DIGIT SUBTRACTION DRILL                    -->
+<!-- ============================================================ -->
+<div style="width:100%;max-width:620px;margin-top:72px;">
+  <div style="text-align:center;margin-bottom:32px;">
+    <div style="font-family:'Playfair Display',serif;font-size:clamp(1.6rem,5vw,2.6rem);font-weight:900;letter-spacing:-0.02em;color:#1a1a14;line-height:1;">Single Digits</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;color:#4a4a38;margin-top:6px;">Subtraction Drill · 1 – 10</div>
+    <div style="width:60px;height:2px;background:#2d6e3e;margin:12px auto 0;"></div>
+  </div>
+
+  <!-- SS START -->
+  <div id="ss-screen-start" class="ss-screen ss-active">
+    <div class="start-card">
+      <h2>Positive Results Only</h2>
+      <p>Every single-digit subtraction where the result is zero or positive — randomized. One variable is always hidden. Work through all of them, then revisit any you missed until every answer is correct.</p>
+      <button class="btn" onclick="ssStart()">Begin Drill</button>
+    </div>
+  </div>
+
+  <!-- SS GAME -->
+  <div id="ss-screen-game" class="ss-screen">
+    <div class="progress-bar-wrap">
+      <div class="progress-label">
+        <span>Progress</span>
+        <span class="score-display"><span id="ss-score">0</span> / <span id="ss-total">?</span></span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="ss-progress-fill" style="width:0%"></div>
+      </div>
+    </div>
+    <div class="equation-card">
+      <div class="equation-row" id="ss-equation-row"></div>
+      <div class="feedback-row">
+        <div class="feedback-msg" id="ss-feedback-msg"></div>
+      </div>
+      <div class="submit-row">
+        <button class="btn" onclick="ssSubmit()">Check</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SS REVIEW -->
+  <div id="ss-screen-review" class="ss-screen">
+    <div class="review-card">
+      <h2>Drill Complete</h2>
+      <div class="stat-line" id="ss-review-stat"></div>
+      <p style="color:var(--ink-soft);font-size:.9rem;margin-bottom:20px;">You missed <strong id="ss-missed-count"></strong> problem(s). Work through them now — all must be correct before you finish.</p>
+      <ul class="review-list" id="ss-review-list"></ul>
+      <button class="btn" onclick="ssStartReview()">Practice Missed</button>
+    </div>
+  </div>
+
+  <!-- SS CELEBRATION -->
+  <div id="ss-screen-celebration" class="ss-screen">
+    <div class="celebration-card">
+      <div class="viva">¡Viva México!</div>
+      <p class="celebration-msg">All subtraction facts answered correctly.<br>Every single one. Brilliant work.</p>
+      <div class="celebration-stat" id="ss-celebration-stat"></div>
+      <br>
+      <button class="btn" onclick="ssStart()">Drill Again</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .ss-screen { display: none; width: 100%; }
+  .ss-screen.ss-active { display: block; animation: fadeIn 0.3s ease; }
+</style>
+
+<script>
+// ===========================
+// SINGLE-DIGIT SUBTRACTION DRILL
+// a − b = c, where a in 1–9, b in 0–9 (using 0 for a−a=0), c >= 0
+// Actually: a in 1–9, b in 0–a so c = a−b >= 0
+// ===========================
+
+function buildSsEquations() {
+  const eqs = [];
+  for (let a = 1; a <= 10; a++) {
+    for (let b = 0; b <= a; b++) {
+      eqs.push({ type: 'sub', a, b, c: a - b });
+    }
+  }
+  return eqs;
+}
+
+function ssAssignBlank(eq) {
+  // If b is 0, avoid blanking b (trivial/confusing: a − ? = a always means 0)
+  // Allow all 3 positions otherwise
+  const pos = Math.floor(Math.random() * 3);
+  return { ...eq, blank: pos };
+}
+
+function ssShuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+const SS_ALL = buildSsEquations();
+
+let ssQueue = [];
+let ssIndex = 0;
+let ssCorrect = 0;
+let ssAttempts = 0;
+let ssWrong = [];
+let ssReviewQueue = [];
+let ssReviewIndex = 0;
+let ssIsReview = false;
+
+function ssShowScreen(id) {
+  document.querySelectorAll('.ss-screen').forEach(s => s.classList.remove('ss-active'));
+  document.getElementById('ss-screen-' + id).classList.add('ss-active');
+}
+
+function ssStart() {
+  ssQueue = ssShuffle(SS_ALL.map(e => ssAssignBlank({ ...e })));
+  ssIndex = 0;
+  ssCorrect = 0;
+  ssAttempts = 0;
+  ssWrong = [];
+  ssIsReview = false;
+  document.getElementById('ss-total').textContent = ssQueue.length;
+  ssShowScreen('game');
+  ssRender();
+}
+
+function ssStartReview() {
+  ssReviewQueue = ssShuffle(ssWrong.map(e => ssAssignBlank({ ...e })));
+  ssReviewIndex = 0;
+  ssIsReview = true;
+  ssShowScreen('game');
+  ssRender();
+}
+
+function ssRender() {
+  const eq = ssIsReview ? ssReviewQueue[ssReviewIndex] : ssQueue[ssIndex];
+  if (!eq) return;
+
+  const total = ssIsReview ? ssReviewQueue.length : ssQueue.length;
+  const done  = ssIsReview ? ssReviewIndex : ssIndex;
+  document.getElementById('ss-score').textContent = done;
+  document.getElementById('ss-total').textContent = total;
+  document.getElementById('ss-progress-fill').style.width = (done / total * 100) + '%';
+
+  const row = document.getElementById('ss-equation-row');
+  row.innerHTML = '';
+
+  const parts = [
+    { value: eq.a, index: 0 }, 'op',
+    { value: eq.b, index: 1 }, 'eq',
+    { value: eq.c, index: 2 }
+  ];
+
+  parts.forEach(part => {
+    if (part === 'op') {
+      const s = document.createElement('span');
+      s.className = 'eq-op'; s.textContent = '−';
+      row.appendChild(s);
+    } else if (part === 'eq') {
+      const s = document.createElement('span');
+      s.className = 'eq-equals'; s.textContent = '=';
+      row.appendChild(s);
+    } else {
+      if (part.index === eq.blank) {
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.className = 'answer-input';
+        input.id = 'ss-answer-input';
+        input.autocomplete = 'off';
+        input.addEventListener('keydown', e => { if (e.key === 'Enter') ssSubmit(); });
+        row.appendChild(input);
+        setTimeout(() => input.focus(), 50);
+      } else {
+        const s = document.createElement('span');
+        s.className = 'eq-part'; s.textContent = part.value;
+        row.appendChild(s);
+      }
+    }
+  });
+
+  const fb = document.getElementById('ss-feedback-msg');
+  fb.className = 'feedback-msg'; fb.textContent = '';
+}
+
+function ssSubmit() {
+  const input = document.getElementById('ss-answer-input');
+  if (!input) return;
+  const val = parseInt(input.value, 10);
+  if (isNaN(val)) {
+    const fb = document.getElementById('ss-feedback-msg');
+    fb.className = 'feedback-msg visible err'; fb.textContent = 'Enter a number.';
+    input.focus(); return;
+  }
+
+  const eq = ssIsReview ? ssReviewQueue[ssReviewIndex] : ssQueue[ssIndex];
+  const correct = [eq.a, eq.b, eq.c][eq.blank];
+
+  if (val === correct) {
+    input.classList.add('correct');
+    const fb = document.getElementById('ss-feedback-msg');
+    fb.className = 'feedback-msg visible ok'; fb.textContent = 'Correct!';
+
+    setTimeout(() => {
+      if (ssIsReview) {
+        ssReviewIndex++;
+        if (ssReviewIndex >= ssReviewQueue.length) ssCelebrate();
+        else ssRender();
+      } else {
+        ssCorrect++;
+        ssAttempts++;
+        ssIndex++;
+        if (ssIndex >= ssQueue.length) ssGoReview();
+        else ssRender();
+      }
+    }, 600);
+  } else {
+    input.classList.add('wrong');
+    const fb = document.getElementById('ss-feedback-msg');
+    fb.className = 'feedback-msg visible err'; fb.textContent = 'Not quite — try again.';
+    ssAttempts++;
+    if (!ssIsReview && !eq._markedWrong) {
+      eq._markedWrong = true;
+      ssWrong.push(eq);
+    }
+    setTimeout(() => {
+      input.value = ''; input.classList.remove('wrong');
+      fb.className = 'feedback-msg'; fb.textContent = '';
+      input.focus();
+    }, 900);
+  }
+}
+
+function ssGoReview() {
+  if (ssWrong.length === 0) { ssCelebrate(); return; }
+
+  document.getElementById('ss-review-stat').textContent =
+    `${ssAttempts} attempts · ${ssWrong.length} missed`;
+  document.getElementById('ss-missed-count').textContent = ssWrong.length;
+
+  const list = document.getElementById('ss-review-list');
+  list.innerHTML = '';
+  ssWrong.forEach(eq => {
+    const li = document.createElement('li');
+    li.className = 'review-item';
+    li.textContent = eq.blank === 0 ? `? − ${eq.b} = ${eq.c}`
+                   : eq.blank === 1 ? `${eq.a} − ? = ${eq.c}`
+                   : `${eq.a} − ${eq.b} = ?`;
+    list.appendChild(li);
+  });
+  ssShowScreen('review');
+}
+
+function ssCelebrate() {
+  document.getElementById('ss-celebration-stat').textContent =
+    `${ssAttempts} total attempts · all ${SS_ALL.length} correct`;
+  ssShowScreen('celebration');
+  launchConfetti();
 }
 </script>
 </body>
